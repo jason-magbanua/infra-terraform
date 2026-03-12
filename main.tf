@@ -1,18 +1,3 @@
-terraform {
-  required_providers {
-    proxmox = {
-      source  = "bpg/proxmox"
-      version = "~> 0.98.0"
-    }
-  }
-}
-
-provider "proxmox" {
-  endpoint  = var.proxmox_endpoint
-  api_token = var.proxmox_api_token
-  insecure  = true
-}
-
 ############################################################
 # Infrastructure Definitions
 ############################################################
@@ -23,6 +8,68 @@ locals {
 
     ubuntu-vm-host1 = {
       hostname = "ubuntu-vm-host1"
+      cores    = 4
+      memory   = 4096
+
+      disk = {
+        size      = 20
+        datastore = "local-ssd"
+        format    = "qcow2"
+      }
+
+      additional_disks = [
+        {
+          size      = 40
+          datastore = "local-ssd"
+          format    = "qcow2"
+        },
+        {
+          size      = 40
+          datastore = "local-ssd"
+          format    = "qcow2"
+        }
+      ]
+
+      network = {
+        bridge = "vmbr4"
+        vlan   = 200
+        dhcp   = true
+      }
+    }
+
+    ubuntu-vm-host2 = {
+      hostname = "ubuntu-vm-host2"
+      cores    = 4
+      memory   = 4096
+
+      disk = {
+        size      = 20
+        datastore = "local-ssd"
+        format    = "qcow2"
+      }
+
+      additional_disks = [
+        {
+          size      = 40
+          datastore = "local-ssd"
+          format    = "qcow2"
+        },
+        {
+          size      = 40
+          datastore = "local-ssd"
+          format    = "qcow2"
+        }
+      ]
+
+      network = {
+        bridge = "vmbr4"
+        vlan   = 200
+        dhcp   = true
+      }
+    }
+
+    ubuntu-vm-host3 = {
+      hostname = "ubuntu-vm-host3"
       cores    = 4
       memory   = 4096
 

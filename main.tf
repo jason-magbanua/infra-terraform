@@ -4,73 +4,44 @@
 
 locals {
 
+  wp_host_defaults = {
+    cores  = 4
+    memory = 4096
+
+    disk = { size = 20, datastore = "local-ssd", format = "qcow2" }
+
+    additional_disks = [
+      { size = 40, datastore = "local-ssd", format = "qcow2" },
+      { size = 40, datastore = "local-ssd", format = "qcow2" }
+    ]
+
+    network = { bridge = "vmbr4", vlan = 200, dhcp = true }
+  }
+
+  wp_hosts = {
+    wp-host1 = { hostname = "wp-host1" }
+  }
+
   vms = {
-
-    ubuntu-vm-host1 = {
-      hostname = "ubuntu-vm-host1"
-      cores    = 4
-      memory   = 4096
-
-      disk = {
-        size      = 20
-        datastore = "local-ssd"
-        format    = "qcow2"
-      }
-
-      additional_disks = [
-        {
-          size      = 40
-          datastore = "local-ssd"
-          format    = "qcow2"
-        },
-        {
-          size      = 40
-          datastore = "local-ssd"
-          format    = "qcow2"
-        }
-      ]
-
-      network = {
-        bridge = "vmbr4"
-        vlan   = 200
-        dhcp   = true
-      }
-    }
-
-    ubuntu-vm-host2 = {
-      hostname = "ubuntu-vm-host2"
-      cores    = 4
-      memory   = 4096
-
-      disk = {
-        size      = 20
-        datastore = "local-ssd"
-        format    = "qcow2"
-      }
-
-      additional_disks = [
-        {
-          size      = 40
-          datastore = "local-ssd"
-          format    = "qcow2"
-        },
-        {
-          size      = 40
-          datastore = "local-ssd"
-          format    = "qcow2"
-        }
-      ]
-
-      network = {
-        bridge = "vmbr4"
-        vlan   = 200
-        dhcp   = true
-      }
-    }
-
+    for name, host in local.wp_hosts :
+    name => merge(local.wp_host_defaults, host)
   }
 
   containers = {
+
+    jump-host = {
+      hostname = "jump-host"
+      cores    = 1
+      memory   = 512
+      disk     = 8
+      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+    
+      network = {
+        bridge = "vmbr4"
+        vlan   = 200
+        dhcp   = true
+      }
+    }
 
     jump-host = {
       hostname = "jump-host"

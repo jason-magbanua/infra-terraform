@@ -97,7 +97,7 @@ module "containers" {
 
   node_name      = "pve1"
   datastore_id   = "local-ssd"
-  ssh_public_key = "~/.ssh/root-sshkey.rsa.pub"
+  ssh_public_key = "~/.ssh/id_rsa_ansible.pub"
 
   container = each.value
 }

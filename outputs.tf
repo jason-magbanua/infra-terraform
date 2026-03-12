@@ -2,7 +2,7 @@ output "ansible_inventory" {
   value = <<EOT
 [proxmox_vms]
 %{ for vm in module.vms ~}
-${vm.name} ansible_host=${[for ip in flatten(vm.ipv4_addresses) : ip if ip != "127.0.0.1"][0]} ansible_user=infra
+${vm.name} ansible_host=${[for ip in flatten(vm.ipv4_addresses) : ip if ip != "127.0.0.1"][0]}
 %{ endfor }
 
 [proxmox_containers]

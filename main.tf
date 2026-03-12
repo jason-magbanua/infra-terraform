@@ -68,37 +68,6 @@ locals {
       }
     }
 
-    ubuntu-vm-host3 = {
-      hostname = "ubuntu-vm-host3"
-      cores    = 4
-      memory   = 4096
-
-      disk = {
-        size      = 20
-        datastore = "local-ssd"
-        format    = "qcow2"
-      }
-
-      additional_disks = [
-        {
-          size      = 40
-          datastore = "local-ssd"
-          format    = "qcow2"
-        },
-        {
-          size      = 40
-          datastore = "local-ssd"
-          format    = "qcow2"
-        }
-      ]
-
-      network = {
-        bridge = "vmbr4"
-        vlan   = 200
-        dhcp   = true
-      }
-    }
-
   }
 
   containers = {

@@ -20,6 +20,7 @@ locals {
 
   wp_hosts = {
     wp-host1 = { hostname = "wp-host1" }
+    wp-host2 = { hostname = "wp-host2" }
   }
 
   vms = {
@@ -43,8 +44,8 @@ locals {
       }
     }
 
-    jump-host = {
-      hostname = "jump-host"
+    nginx = {
+      hostname = "nginx"
       cores    = 1
       memory   = 512
       disk     = 8

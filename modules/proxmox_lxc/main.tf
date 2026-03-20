@@ -28,7 +28,8 @@ resource "proxmox_virtual_environment_container" "container" {
 
     ip_config {
       ipv4 {
-        address = var.container.network.dhcp ? "dhcp" : null
+        address = try(var.container.network.address, "dhcp")
+        gateway = try(var.container.network.gateway, null)
       }
     }
   }
@@ -50,10 +51,16 @@ resource "proxmox_virtual_environment_container" "container" {
   network_interface {
     name    = "eth0"
     bridge  = var.container.network.bridge
-    vlan_id = var.container.network.vlan
+    vlan_id = try(var.container.network.vlan, null)
   }
 
   features {
     nesting = true
+  }
+
+  lifecycle {
+    ignore_changes = [
+      initialization
+    ]
   }
 }

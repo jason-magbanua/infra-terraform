@@ -1,114 +1,63 @@
 # infra-terraform
 
-Terraform Infrastructure-as-Code for provisioning Proxmox VMs, LXC containers, and multi-cloud resources (GCP, OCI, AWS).
-
-This repository contains Terraform configurations used to provision and manage infrastructure for a home lab environment. It focuses on maintaining a simple, modular, and data-driven Infrastructure-as-Code structure that can grow as the infrastructure expands.
-
-Terraform is responsible for **infrastructure provisioning**, while configuration management is handled separately using Ansible.
+Terraform IaC for provisioning a home lab on Proxmox VE. Terraform handles infrastructure provisioning; Ansible handles configuration management.
 
 ---
 
-## Infrastructure Providers
-
-Current and planned providers supported in this repository:
-
-- Proxmox VE (VMs and LXC containers)
-- Google Cloud Platform (GCP) *(future)*
-- Oracle Cloud Infrastructure (OCI) *(future)*
-- Amazon Web Services (AWS) *(future)*
-
----
-
-## Repository Structure
-
-Example layout:
+## Structure
 
 ```
-infra-terraform/
-├── modules/        # Reusable Terraform modules
-├── providers/      # Provider configurations
-├── environments/   # Environment-specific infrastructure
-├── scripts/        # Helper scripts used by Terraform
-├── main.tf         # Root Terraform configuration
-├── variables.tf
-├── outputs.tf
-└── README.md
+terraform/
+├── main.tf               # All VM and container definitions
+├── providers.tf          # Provider config and version pins
+├── variables.tf          # Root input variables
+├── outputs.tf            # infra_summary output
+├── ansible.tf            # Auto-generated Ansible inventory
+├── docs/
+│   └── proxmox-template.md  # Proxmox provisioning reference
+└── modules/
+    ├── proxmox_vm/       # Reusable module for Proxmox VMs
+    └── proxmox_lxc/      # Reusable module for LXC containers
 ```
-
-This structure keeps infrastructure modular and easier to scale as new environments or providers are added.
-
----
-
-## Design Principles
-
-This repository follows several key principles:
-
-- Data-driven infrastructure definitions
-- Avoid unnecessary complexity
-- Easy to maintain and expand
-- Clear separation of infrastructure provisioning and configuration management
-
-Terraform provisions infrastructure resources such as VMs, containers, disks, and networks.
 
 ---
 
 ## Requirements
 
-Required tools:
-
-- Terraform (>= 1.14)
-- Access credentials for infrastructure providers
-- SSH access where required
+- Terraform >= 1.3
+- Proxmox API token with VM/CT create permissions
+- A base VM template at ID `9000` on the target node
 
 ---
 
-## Usage
+## Quick Start
 
-Initialize Terraform:
+Create a `terraform.tfvars`:
 
+```hcl
+proxmox_endpoint  = "https://<proxmox-ip>:8006"
+proxmox_api_token = "root@pam!terraform=<token>"
+proxmox_node      = "pve1"
 ```
+
+Then:
+
+```bash
 terraform init
-```
-
-Preview planned changes:
-
-```
 terraform plan
-```
-
-Apply infrastructure changes:
-
-```
 terraform apply
 ```
+
+The Ansible inventory is written to `/opt/infra/ansible/inventory/lab/hosts` automatically on apply.
+
+---
+
+## Proxmox Provisioning
+
+For full details on adding VMs and containers, module inputs/outputs, and design decisions, see [docs/proxmox-template.md](docs/proxmox-template.md).
 
 ---
 
 ## Security
 
-Sensitive data such as API tokens and credentials should **not be committed to the repository**.
-
-Use local variable files such as:
-
-```
-secrets.auto.tfvars
-```
-
-Ensure these files are excluded from version control using `.gitignore`.
-
----
-
-## Future Goals
-
-Planned improvements include:
-
-- Multi-cloud infrastructure support
-- Kubernetes cluster provisioning
-- Additional reusable Terraform modules
-- Infrastructure automation pipelines
-
----
-
-## License
-
-This project is licensed under the MIT License.
+`*.tfvars` and `*.tfstate` are excluded by `.gitignore`. Never commit API tokens or state files.

@@ -20,13 +20,34 @@ locals {
 
   wp_hosts = {
     wp-host1 = { hostname = "wp-host1" }
-    wp-host2 = { hostname = "wp-host2" }
   }
 
-  vms = {
-    for name, host in local.wp_hosts :
-    name => merge(local.wp_host_defaults, host)
-  }
+  vms = merge(
+    {
+      for name, host in local.wp_hosts :
+      name => merge(local.wp_host_defaults, host)
+    },
+    {
+      docker-host = {
+        hostname = "docker-host"
+        cores    = 2
+        memory   = 2048
+
+        disk = {
+          size      = 10
+          datastore = "local-ssd"
+          format    = "qcow2"
+        }
+
+        network = {
+          bridge  = "vmbr4"
+          vlan    = 200
+          address = "10.10.200.4/29"
+          gateway = "10.10.200.1"
+        }
+      }
+    }
+  )
 
   containers = {
 
@@ -37,11 +58,7 @@ locals {
       disk     = 8
       template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
     
-      network = {
-        bridge = "vmbr4"
-        vlan   = 200
-        dhcp   = true
-      }
+      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
     }
 
   }

@@ -32,7 +32,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
   }
 
   dynamic "disk" {
-    for_each = var.vm.additional_disks
+    for_each = try(var.vm.additional_disks, {})
     content {
       datastore_id = disk.value.datastore
       interface    = "scsi${disk.key + 1}"
@@ -44,7 +44,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
 
   network_device {
     bridge  = var.vm.network.bridge
-    vlan_id = var.vm.network.vlan
+    vlan_id = try(var.vm.network.vlan, null)
   }
 
   agent {
@@ -52,10 +52,19 @@ resource "proxmox_virtual_environment_vm" "vm" {
   }
 
   initialization {
+    datastore_id = var.vm.disk.datastore
+
     ip_config {
       ipv4 {
-        address = var.vm.network.dhcp ? "dhcp" : null
+        address = try(var.vm.network.address, "dhcp")
+        gateway = try(var.vm.network.gateway, null)
       }
     }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      initialization
+    ]
   }
 }

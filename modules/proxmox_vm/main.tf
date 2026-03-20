@@ -12,7 +12,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
   node_name = var.node_name
 
   clone {
-    vm_id = 9000
+    vm_id = var.clone_vm_id
   }
 
   cpu {
@@ -32,7 +32,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
   }
 
   dynamic "disk" {
-    for_each = try(var.vm.additional_disks, {})
+    for_each = var.vm.additional_disks
     content {
       datastore_id = disk.value.datastore
       interface    = "scsi${disk.key + 1}"
@@ -44,7 +44,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
 
   network_device {
     bridge  = var.vm.network.bridge
-    vlan_id = try(var.vm.network.vlan, null)
+    vlan_id = var.vm.network.vlan
   }
 
   agent {
@@ -56,8 +56,8 @@ resource "proxmox_virtual_environment_vm" "vm" {
 
     ip_config {
       ipv4 {
-        address = try(var.vm.network.address, "dhcp")
-        gateway = try(var.vm.network.gateway, null)
+        address = var.vm.network.address
+        gateway = var.vm.network.gateway
       }
     }
   }

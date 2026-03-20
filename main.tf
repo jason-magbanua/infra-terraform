@@ -4,6 +4,8 @@
 
 locals {
 
+  ubuntu_template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+
   wp_host_defaults = {
     cores  = 4
     memory = 4096
@@ -15,17 +17,32 @@ locals {
       { size = 40, datastore = "local-ssd", format = "qcow2" }
     ]
 
-    network = { bridge = "vmbr4", vlan = 200, dhcp = true }
+    network = { bridge = "vmbr4", vlan = 200 }
   }
 
   wp_hosts = {
-    wp-host1 = { hostname = "wp-host1" }
+    wp-host1 = {}
+  }
+
+  monitoring_defaults = {
+    cores    = 1
+    memory   = 1024
+    disk     = 8
+    template = local.ubuntu_template
+    network  = { bridge = "vmbr4", vlan = 200 }
+  }
+
+  monitoring_hosts = {
+    prometheus   = {}
+    grafana      = {}
+    loki         = {}
+    alertmanager = {}
   }
 
   vms = merge(
     {
       for name, host in local.wp_hosts :
-      name => merge(local.wp_host_defaults, host)
+      name => merge(local.wp_host_defaults, { hostname = name }, host)
     },
     {
       docker-host = {
@@ -49,79 +66,40 @@ locals {
     }
   )
 
-  containers = {
+  containers = merge(
+    {
+      for name, host in local.monitoring_hosts :
+      name => merge(local.monitoring_defaults, { hostname = name }, host)
+    },
+    {
+      jump-host = {
+        hostname = "jump-host"
+        cores    = 1
+        memory   = 512
+        disk     = 8
+        template = local.ubuntu_template
+        network  = { bridge = "vmbr4", vlan = 200 }
+      }
 
-    jump-host = {
-      hostname = "jump-host"
-      cores    = 1
-      memory   = 512
-      disk     = 8
-      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    
-      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
+      tailscale = {
+        hostname = "tailscale"
+        cores    = 1
+        memory   = 512
+        disk     = 4
+        template = local.ubuntu_template
+        network  = { bridge = "vmbr4", vlan = 200 }
+      }
+
+      coredns = {
+        hostname = "coredns"
+        cores    = 1
+        memory   = 1024
+        disk     = 8
+        template = local.ubuntu_template
+        network  = { bridge = "vmbr4", vlan = 200 }
+      }
     }
-
-    tailscale = {
-      hostname = "tailscale"
-      cores    = 1
-      memory   = 512
-      disk     = 4
-      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    
-      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
-    }
-
-    coredns = {
-      hostname = "coredns"
-      cores    = 1
-      memory   = 1024
-      disk     = 8
-      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    
-      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
-    }
-
-    prometheus = {
-      hostname = "prometheus"
-      cores    = 1
-      memory   = 1024
-      disk     = 8
-      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    
-      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
-    }
-
-    grafana = {
-      hostname = "grafana"
-      cores    = 1
-      memory   = 1024
-      disk     = 8
-      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    
-      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
-    }
-
-    loki = {
-      hostname = "loki"
-      cores    = 1
-      memory   = 1024
-      disk     = 8
-      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    
-      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
-    }
-
-    alertmanager = {
-      hostname = "alertmanager"
-      cores    = 1
-      memory   = 1024
-      disk     = 8
-      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-    
-      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
-    }
-
-  }
+  )
 }
 
 ############################################################
@@ -133,7 +111,7 @@ module "vms" {
 
   for_each = local.vms
 
-  node_name = "pve1"
+  node_name = var.proxmox_node
   vm        = each.value
 }
 
@@ -146,7 +124,7 @@ module "containers" {
 
   for_each = local.containers
 
-  node_name      = "pve1"
+  node_name      = var.proxmox_node
   datastore_id   = "local-ssd"
   ssh_public_key = "~/.ssh/id_rsa_ansible.pub"
 

@@ -10,11 +10,24 @@ variable "datastore_id" {
 }
 
 variable "ssh_public_key" {
-  description = "SSH public key injected into container"
+  description = "Path to SSH public key file to inject into container"
   type        = string
 }
 
 variable "container" {
-  description = "Container configuration object"
-  type        = any
+  description = "Container configuration"
+  type = object({
+    hostname = string
+    cores    = number
+    memory   = number
+    disk     = number
+    template = string
+    os_type  = optional(string, "ubuntu")
+    network = object({
+      bridge  = string
+      vlan    = optional(number)
+      address = optional(string, "dhcp")
+      gateway = optional(string)
+    })
+  })
 }

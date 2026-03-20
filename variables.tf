@@ -1,8 +1,16 @@
 variable "proxmox_endpoint" {
-  type = string
+  description = "URL of the Proxmox API endpoint"
+  type        = string
 }
 
 variable "proxmox_api_token" {
-  type      = string
-  sensitive = true
+  description = "Proxmox API token for authentication"
+  type        = string
+  sensitive   = true
+}
+
+variable "proxmox_node" {
+  description = "Proxmox node name where resources will be created"
+  type        = string
+  default     = "pve1"
 }

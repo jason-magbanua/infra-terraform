@@ -14,7 +14,7 @@ resource "proxmox_virtual_environment_container" "container" {
 
   operating_system {
     template_file_id = var.container.template
-    type             = "ubuntu"
+    type             = var.container.os_type
   }
 
   initialization {
@@ -22,14 +22,14 @@ resource "proxmox_virtual_environment_container" "container" {
 
     user_account {
       keys = [
-        file(var.ssh_public_key)
+        file(pathexpand(var.ssh_public_key))
       ]
     }
 
     ip_config {
       ipv4 {
-        address = try(var.container.network.address, "dhcp")
-        gateway = try(var.container.network.gateway, null)
+        address = var.container.network.address
+        gateway = var.container.network.gateway
       }
     }
   }
@@ -51,7 +51,7 @@ resource "proxmox_virtual_environment_container" "container" {
   network_interface {
     name    = "eth0"
     bridge  = var.container.network.bridge
-    vlan_id = try(var.container.network.vlan, null)
+    vlan_id = var.container.network.vlan
   }
 
   features {

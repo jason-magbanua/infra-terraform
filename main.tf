@@ -91,6 +91,26 @@ locals {
       network = { bridge = "vmbr4", vlan = 200, dhcp = true }
     }
 
+    loki = {
+      hostname = "loki"
+      cores    = 1
+      memory   = 1024
+      disk     = 8
+      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+    
+      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
+    }
+
+    alertmanager = {
+      hostname = "alertmanager"
+      cores    = 1
+      memory   = 1024
+      disk     = 8
+      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+    
+      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
+    }
+
   }
 }
 

@@ -61,6 +61,36 @@ locals {
       network = { bridge = "vmbr4", vlan = 200, dhcp = true }
     }
 
+    tailscale = {
+      hostname = "tailscale"
+      cores    = 1
+      memory   = 512
+      disk     = 4
+      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+    
+      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
+    }
+
+    coredns = {
+      hostname = "coredns"
+      cores    = 1
+      memory   = 1024
+      disk     = 8
+      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+    
+      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
+    }
+
+    grafana = {
+      hostname = "grafana"
+      cores    = 1
+      memory   = 1024
+      disk     = 8
+      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+    
+      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
+    }
+
   }
 }
 

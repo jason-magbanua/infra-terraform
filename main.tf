@@ -81,6 +81,16 @@ locals {
       network = { bridge = "vmbr4", vlan = 200, dhcp = true }
     }
 
+    prometheus = {
+      hostname = "prometheus"
+      cores    = 1
+      memory   = 1024
+      disk     = 8
+      template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+    
+      network = { bridge = "vmbr4", vlan = 200, dhcp = true }
+    }
+
     grafana = {
       hostname = "grafana"
       cores    = 1

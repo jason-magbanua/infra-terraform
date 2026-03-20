@@ -26,7 +26,10 @@ ${vm.name} ansible_host=${try([for ip in flatten(vm.ipv4_addresses) : ip if ip !
 
 [proxmox_containers]
 %{ for ct in module.containers ~}
-${ct.hostname} ansible_host=${try([for ip in ct.ipv4 : ip if ip != "127.0.0.1"][0], "")} ansible_user=root
+${ct.hostname} ansible_host=${try([for ip in ct.ipv4 : ip if ip != "127.0.0.1"][0], "")}
 %{ endfor }
+
+[proxmox_containers:vars]
+ansible_user=root
 EOT
 }

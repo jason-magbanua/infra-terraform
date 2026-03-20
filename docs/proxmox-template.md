@@ -1,205 +1,245 @@
-# Proxmox Ubuntu Cloud Template
+# Proxmox VM & LXC Provisioning
 
-This document explains how to prepare the **Ubuntu 24.04 LTS cloud image template** used by Terraform in this repository.
-
-All virtual machines are cloned from this template using the `bpg/proxmox` Terraform provider.
-
-The template only needs to be prepared **once**.
+Terraform provisions Proxmox VMs and LXC containers via the [`bpg/proxmox`](https://registry.terraform.io/providers/bpg/proxmox/latest/docs) provider. All infrastructure is defined in `terraform/main.tf` and deployed through two reusable modules.
 
 ---
 
-# Overview
-
-Terraform provisions infrastructure using this workflow:
+## Directory Structure
 
 ```
-Ubuntu Cloud Image
-        ↓
-Proxmox Template (VM 9000)
-        ↓
-Terraform clone
-        ↓
-Cloud-init configuration
-        ↓
-VM ready for Ansible
-```
-
-The template provides:
-
-- Ubuntu 24.04 LTS base system
-- cloud-init support
-- QEMU guest agent
-- SSH access for the `infra` user
-- DHCP networking
-
----
-
-# Step 1 — Download Ubuntu Cloud Image
-
-Download the Ubuntu cloud image from the official Ubuntu servers.
-
-```bash
-wget https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img \
-  -O /mnt/ssd_1T/vz/template/iso/noble-server-cloudimg-amd64.img
+terraform/
+├── main.tf               # All VM and container definitions
+├── providers.tf          # Provider config and version pins
+├── variables.tf          # Root input variables (endpoint, token, node)
+├── outputs.tf            # infra_summary output (name → IP map)
+├── ansible.tf            # Ansible inventory generated from provisioned IPs
+└── modules/
+    ├── proxmox_vm/       # Reusable module for Proxmox VMs
+    │   ├── main.tf
+    │   ├── variables.tf
+    │   └── outputs.tf
+    └── proxmox_lxc/      # Reusable module for LXC containers
+        ├── main.tf
+        ├── variables.tf
+        └── outputs.tf
 ```
 
 ---
 
-# Step 2 — Create the Base VM
+## Prerequisites
 
-Create the VM that will later become the template.
-
-```bash
-qm create 9000 \
-  --name template-ubuntu-2404 \
-  --memory 1024 \
-  --cores 1 \
-  --cpu x86-64-v2-AES \
-  --machine q35 \
-  --net0 virtio,bridge=vmbr4,tag=200 \
-  --serial0 socket \
-  --vga serial0 \
-  --agent enabled=1
-```
-
-Explanation:
-
-- **VM ID `9000`** will be used by Terraform as the clone source
-- **q35 machine type** provides modern PCIe virtualization
-- **serial console** is recommended for cloud images
-- **QEMU guest agent** allows Terraform to detect VM IP addresses
+- Terraform >= 1.3 (required for `optional()` typed variables)
+- Proxmox API token with VM/CT create permissions
+- A base VM template at ID `9000` on the target node (for VM cloning)
+- Ubuntu LXC template available at `local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst`
+- SSH keypair at `~/.ssh/id_rsa_ansible` / `~/.ssh/id_rsa_ansible.pub`
 
 ---
 
-# Step 3 — Import the Cloud Image Disk
+## Configuration
 
-Import the downloaded Ubuntu image into Proxmox storage.
+### Variables
 
-```bash
-qm importdisk 9000 \
-  /mnt/ssd_1T/vz/template/iso/noble-server-cloudimg-amd64.img \
-  local-ssd \
-  --format qcow2
-```
+| Variable             | Description                              | Default |
+|----------------------|------------------------------------------|---------|
+| `proxmox_endpoint`   | URL of the Proxmox API endpoint          | —       |
+| `proxmox_api_token`  | Proxmox API token (sensitive)            | —       |
+| `proxmox_node`       | Node name where resources are created    | `pve1`  |
 
-Attach the imported disk to the VM:
+Set these via a `terraform.tfvars` file or environment variables (`TF_VAR_*`).
 
-```bash
-qm set 9000 --scsihw virtio-scsi-pci
-qm set 9000 --scsi0 local-ssd:9000/vm-9000-disk-0.qcow2,discard=on,ssd=1
-```
-
-Why virtio-scsi?
-
-- better performance
-- discard/TRIM support
-- recommended for Linux guests
-
----
-
-# Step 4 — Enable Cloud-Init
-
-Attach the cloud-init drive.
-
-```bash
-qm set 9000 --ide2 local-ssd:cloudinit
-qm set 9000 --boot order=scsi0
-```
-
-This enables Terraform to configure the VM during boot.
-
----
-
-# Step 5 — Configure Default Cloud-Init Settings
-
-Set the default login user and SSH key.
-
-```bash
-qm set 9000 --ciuser infra
-qm set 9000 --cipassword 'VerySecurePassword'
-qm set 9000 --sshkey ~/.ssh/id_rsa_ansible.pub
-qm set 9000 --ciupgrade 0
-qm set 9000 --ipconfig0 ip=dhcp
-```
-
-Explanation:
-
-| Setting | Purpose |
-|--------|--------|
-| ciuser | default cloud-init user |
-| sshkey | injects SSH public key |
-| ipconfig0 | DHCP networking |
-| ciupgrade | disables automatic package upgrades |
-
-Terraform and Ansible will connect using the **infra user**.
-
----
-
-# Step 6 — Convert the VM to a Template
-
-Convert the VM into a reusable template.
-
-```bash
-qm template 9000
-```
-
-Terraform will now clone VMs from this template.
-
----
-
-# Verify Template Configuration
-
-Run:
-
-```bash
-qm config 9000
-```
-
-Expected configuration should include:
-
-```
-agent: enabled=1
-ide2: local-ssd:cloudinit
-scsi0: local-ssd:9000/vm-9000-disk-0.qcow2
+Example `terraform.tfvars`:
+```hcl
+proxmox_endpoint  = "https://10.10.200.8:8006"
+proxmox_api_token = "root@pam!terraform=<token>"
+proxmox_node      = "pve1"
 ```
 
 ---
 
-# How Terraform Uses This Template
+## Defining Infrastructure
 
-Terraform clones the template using:
+All VMs and containers are defined as `locals` in `terraform/main.tf`. Terraform iterates over them with `for_each` and passes each entry to the appropriate module.
+
+### Adding a VM
+
+VMs are defined under `local.vms`. There are two patterns:
+
+**1. Clone from a defaults group** (e.g. `wp_hosts`):
 
 ```hcl
-clone {
-  vm_id = 9000
+wp_hosts = {
+  wp-host1 = {}        # uses all wp_host_defaults
+  wp-host2 = {
+    memory = 8192      # override a single field
+  }
 }
 ```
 
-Cloud-init then applies configuration such as:
+`wp_host_defaults` provides: 4 cores, 4096 MB RAM, 20 GB boot disk, two 40 GB extra disks, VLAN 200, DHCP.
 
-- networking
-- SSH access
-- hostname
-- system initialization
+**2. Define a standalone VM** (inline in the `vms` merge block):
+
+```hcl
+my-vm = {
+  hostname = "my-vm"
+  cores    = 2
+  memory   = 4096
+
+  disk = {
+    size      = 20
+    datastore = "local-ssd"
+    format    = "qcow2"
+  }
+
+  network = {
+    bridge  = "vmbr4"
+    vlan    = 200
+    address = "10.10.200.10/29"  # omit for DHCP
+    gateway = "10.10.200.1"      # omit for DHCP
+  }
+}
+```
+
+All VMs are cloned from the template at `clone_vm_id` (default `9000`). The QEMU guest agent must be running in the template for IP reporting to work.
+
+### Adding an LXC Container
+
+Containers are defined under `local.containers`. Same two patterns apply:
+
+**1. Clone from a defaults group** (e.g. `monitoring_hosts`):
+
+```hcl
+monitoring_hosts = {
+  my-exporter = {}          # uses all monitoring_defaults
+  prometheus   = {
+    memory = 2048           # override a single field
+  }
+}
+```
+
+`monitoring_defaults` provides: 1 core, 1024 MB RAM, 8 GB disk, Ubuntu 24.04 template, VLAN 200, DHCP.
+
+**2. Define a standalone container**:
+
+```hcl
+my-app = {
+  hostname = "my-app"
+  cores    = 2
+  memory   = 1024
+  disk     = 16
+  template = local.ubuntu_template
+  os_type  = "ubuntu"       # optional, defaults to "ubuntu"
+
+  network = {
+    bridge  = "vmbr4"
+    vlan    = 200
+    address = "10.10.200.20/29"  # omit for DHCP
+    gateway = "10.10.200.1"      # omit for DHCP
+  }
+}
+```
+
+### Shared Template Reference
+
+The Ubuntu template path is defined once as `local.ubuntu_template` and referenced by all containers:
+
+```hcl
+ubuntu_template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+```
+
+To upgrade the template, change it in one place.
 
 ---
 
-# Result
+## Modules
 
-Every VM created from this template will:
+### `proxmox_vm`
 
-- boot with **cloud-init enabled**
-- allow SSH login using **infra**
-- obtain an IP address via **DHCP**
-- support the **QEMU guest agent**
+Clones a VM from a base template and applies CPU, memory, disk, and network configuration via cloud-init.
 
-This provides a reliable base for Terraform and Ansible automation.
+| Variable      | Type     | Description                        | Default |
+|---------------|----------|------------------------------------|---------|
+| `node_name`   | `string` | Target Proxmox node                | —       |
+| `clone_vm_id` | `number` | VM ID to clone from                | `9000`  |
+| `vm`          | `object` | Full VM config (see variables.tf)  | —       |
+
+**Outputs:**
+
+| Output           | Description                      |
+|------------------|----------------------------------|
+| `name`           | VM hostname as registered in PVE |
+| `ipv4_addresses` | All IPv4 addresses from agent    |
+
+**Notes:**
+- The `initialization` block is in `ignore_changes` — cloud-init only runs on first creation. IP/hostname changes require destroy + recreate.
+- `additional_disks` is optional and defaults to `[]`. Disks are attached as `scsi1`, `scsi2`, etc.
+
+### `proxmox_lxc`
+
+Creates an unprivileged LXC container with an injected SSH public key.
+
+| Variable        | Type     | Description                              | Default       |
+|-----------------|----------|------------------------------------------|---------------|
+| `node_name`     | `string` | Target Proxmox node                      | —             |
+| `datastore_id`  | `string` | Datastore for the container disk         | `"local-ssd"` |
+| `ssh_public_key`| `string` | Path to SSH public key file              | —             |
+| `container`     | `object` | Full container config (see variables.tf) | —             |
+
+**Outputs:**
+
+| Output     | Description                        |
+|------------|------------------------------------|
+| `hostname` | Container hostname                 |
+| `ipv4`     | IPv4 addresses from the container  |
+
+**Notes:**
+- Containers run unprivileged with `nesting = true` (required for Docker inside LXC).
+- `swap = 0` — swap is disabled on all containers.
+- The `initialization` block is in `ignore_changes` for the same reason as VMs.
+- `ssh_public_key` supports `~` expansion via `pathexpand()`.
 
 ---
 
-# Important Notes
+## Ansible Integration
 
-- Template ID **9000 must remain constant**
-- Updating the template does **not update existing VMs**
-- Always verify SSH access before converting to template
-- Avoid modifying the template frequently once infrastructure is deployed
+After `terraform apply`, an Ansible inventory is written to `/opt/infra/ansible/inventory/lab/hosts`. It is generated automatically from the provisioned IPs using the `local_file` resource in `ansible.tf`.
+
+To change Ansible connection defaults (user, key path, Proxmox host IP), edit the locals at the top of `ansible.tf`:
+
+```hcl
+locals {
+  ansible_user         = "infra"
+  ansible_ssh_key      = "~/.ssh/id_rsa_ansible"
+  proxmox_host_ip      = "10.10.200.8"
+  proxmox_root_ssh_key = "~/.ssh/root-sshkey.rsa"
+}
+```
+
+---
+
+## Usage
+
+```bash
+cd terraform/
+
+# First time
+terraform init
+
+# Preview changes
+terraform plan
+
+# Apply
+terraform apply
+
+# Inspect IPs
+terraform output infra_summary
+```
+
+---
+
+## Notes & Caveats
+
+- **TLS verification is disabled** (`insecure = true` in `providers.tf`). This is acceptable for a homelab with a self-signed cert but should be replaced with proper cert trust in any shared environment.
+- **No remote state backend** is configured — state is stored locally. If the machine running Terraform is itself managed by Terraform, losing the state file means manual `terraform import` for every resource.
+- The `proxmox_node` variable defaults to `pve1`. If you add a second node, you'll need to parameterise the module calls or duplicate them.

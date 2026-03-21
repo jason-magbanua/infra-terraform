@@ -1,7 +1,7 @@
 locals {
   ansible_user          = "infra"
   ansible_ssh_key       = "~/.ssh/id_rsa_ansible"
-  proxmox_host_ip       = "10.10.200.8"
+  proxmox_host_ip       = "172.16.1.8"
   proxmox_root_ssh_key  = "~/.ssh/root-sshkey.rsa"
   ansible_inventory_path = "/opt/infra/ansible/inventory/lab/hosts"
 }

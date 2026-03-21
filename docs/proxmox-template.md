@@ -50,7 +50,7 @@ Set these via a `terraform.tfvars` file or environment variables (`TF_VAR_*`).
 
 Example `terraform.tfvars`:
 ```hcl
-proxmox_endpoint  = "https://10.10.200.8:8006"
+proxmox_endpoint  = "https://172.16.1.8:8006"
 proxmox_api_token = "root@pam!terraform=<token>"
 proxmox_node      = "pve1"
 ```
@@ -211,7 +211,7 @@ To change Ansible connection defaults (user, key path, Proxmox host IP), edit th
 locals {
   ansible_user         = "infra"
   ansible_ssh_key      = "~/.ssh/id_rsa_ansible"
-  proxmox_host_ip      = "10.10.200.8"
+  proxmox_host_ip      = "172.16.1.8"
   proxmox_root_ssh_key = "~/.ssh/root-sshkey.rsa"
 }
 ```

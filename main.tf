@@ -17,7 +17,7 @@ locals {
       { size = 40, datastore = "local-ssd", format = "qcow2" }
     ]
 
-    network = { bridge = "vmbr4", vlan = 200 }
+    network = { bridge = "vmbr1", vlan = 200 }
   }
 
   wp_hosts = {
@@ -29,7 +29,7 @@ locals {
     memory   = 1024
     disk     = 8
     template = local.ubuntu_template
-    network  = { bridge = "vmbr4", vlan = 200 }
+    network  = { bridge = "vmbr1", vlan = 200 }
   }
 
   monitoring_hosts = {
@@ -57,7 +57,7 @@ locals {
         }
 
         network = {
-          bridge  = "vmbr4"
+          bridge  = "vmbr1"
           vlan    = 200
           address = "10.10.200.4/29"
           gateway = "10.10.200.1"
@@ -78,7 +78,7 @@ locals {
         memory   = 512
         disk     = 8
         template = local.ubuntu_template
-        network  = { bridge = "vmbr4", vlan = 200 }
+        network  = { bridge = "vmbr1", vlan = 200 }
       }
 
       tailscale = {
@@ -87,7 +87,7 @@ locals {
         memory   = 512
         disk     = 4
         template = local.ubuntu_template
-        network  = { bridge = "vmbr4", vlan = 200 }
+        network  = { bridge = "vmbr1", vlan = 200 }
       }
 
       coredns = {
@@ -96,7 +96,7 @@ locals {
         memory   = 1024
         disk     = 8
         template = local.ubuntu_template
-        network  = { bridge = "vmbr4", vlan = 200 }
+        network  = { bridge = "vmbr1", vlan = 200 }
       }
     }
   )

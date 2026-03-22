@@ -21,7 +21,9 @@ locals {
   }
 
   wp_hosts = {
-    wp-host1 = {}
+    wp-host1 = {
+      network = { address = "10.10.200.5/24", gateway = "10.10.200.1" }
+    }
   }
 
   monitoring_defaults = {
@@ -42,7 +44,12 @@ locals {
   vms = merge(
     {
       for name, host in local.wp_hosts :
-      name => merge(local.wp_host_defaults, { hostname = name }, host)
+      name => merge(
+        local.wp_host_defaults,
+        { hostname = name },
+        host,
+        { network = merge(local.wp_host_defaults.network, lookup(host, "network", {})) }
+      )
     },
     {
       docker-host = {
@@ -59,7 +66,7 @@ locals {
         network = {
           bridge  = "vmbr1"
           vlan    = 200
-          address = "10.10.200.4/29"
+          address = "10.10.200.4/24"
           gateway = "10.10.200.1"
         }
       }
@@ -69,7 +76,12 @@ locals {
   containers = merge(
     {
       for name, host in local.monitoring_hosts :
-      name => merge(local.monitoring_defaults, { hostname = name }, host)
+      name => merge(
+        local.monitoring_defaults,
+        { hostname = name },
+        host,
+        { network = merge(local.monitoring_defaults.network, lookup(host, "network", {})) }
+      )
     },
     # {
     #   jump-host = {

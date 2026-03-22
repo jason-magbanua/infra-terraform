@@ -33,10 +33,10 @@ locals {
   }
 
   monitoring_hosts = {
-    prometheus   = {}
-    grafana      = {}
-    loki         = {}
-    alertmanager = {}
+    # prometheus   = {}
+    # grafana      = {}
+    # loki         = {}
+    # alertmanager = {}
   }
 
   vms = merge(
@@ -71,34 +71,34 @@ locals {
       for name, host in local.monitoring_hosts :
       name => merge(local.monitoring_defaults, { hostname = name }, host)
     },
-    {
-      jump-host = {
-        hostname = "jump-host"
-        cores    = 1
-        memory   = 512
-        disk     = 8
-        template = local.ubuntu_template
-        network  = { bridge = "vmbr1", vlan = 200 }
-      }
+    # {
+    #   jump-host = {
+    #     hostname = "jump-host"
+    #     cores    = 1
+    #     memory   = 512
+    #     disk     = 8
+    #     template = local.ubuntu_template
+    #     network  = { bridge = "vmbr1", vlan = 200 }
+    #   }
 
-      tailscale = {
-        hostname = "tailscale"
-        cores    = 1
-        memory   = 512
-        disk     = 4
-        template = local.ubuntu_template
-        network  = { bridge = "vmbr1", vlan = 200 }
-      }
+    #   tailscale = {
+    #     hostname = "tailscale"
+    #     cores    = 1
+    #     memory   = 512
+    #     disk     = 4
+    #     template = local.ubuntu_template
+    #     network  = { bridge = "vmbr1", vlan = 200 }
+    #   }
 
-      coredns = {
-        hostname = "coredns"
-        cores    = 1
-        memory   = 1024
-        disk     = 8
-        template = local.ubuntu_template
-        network  = { bridge = "vmbr1", vlan = 200 }
-      }
-    }
+    #   coredns = {
+    #     hostname = "coredns"
+    #     cores    = 1
+    #     memory   = 1024
+    #     disk     = 8
+    #     template = local.ubuntu_template
+    #     network  = { bridge = "vmbr1", vlan = 200 }
+    #   }
+    # }
   )
 }
 

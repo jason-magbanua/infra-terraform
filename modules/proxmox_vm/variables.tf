@@ -31,5 +31,5 @@ variable "vm" {
       address = optional(string, "dhcp")
       gateway = optional(string)
     })
-  })
+})
 }

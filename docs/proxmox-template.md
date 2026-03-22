@@ -86,6 +86,7 @@ proxmox_node      = "pve1"
 | 10.10.200.40     | hashicorp-vault  | LXC       |
 | 10.10.200.41     | vaultwarden      | Docker    |
 | 10.10.200.42     | authentik        | Docker    |
+| 10.10.200.43     | wiki.js          | Docker    |
 | 10.10.200.50     | docker-host      | VM        |
 
 ---

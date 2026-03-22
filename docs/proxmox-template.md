@@ -57,46 +57,66 @@ proxmox_node      = "pve1"
 
 ---
 
+## Network
+
+| Local        | Value             | Description                     |
+|--------------|-------------------|---------------------------------|
+| `local.gw`   | `10.10.200.1`     | Default gateway for VLAN 200    |
+| `local.lxc_net` | `{ bridge = "vmbr1", vlan = 200 }` | Default container network |
+
+**Subnet:** `10.10.200.0/24`
+**Static range:** `.2` – `.100`
+**DHCP range:** `.101` – `.200`
+
+### IP Allocations
+
+| IP               | Host             | Type      |
+|------------------|------------------|-----------|
+| 10.10.200.1      | gateway (VyOS)   | —         |
+| 10.10.200.3      | jump-host        | LXC       |
+| 10.10.200.4      | apt-cacher-ng    | LXC       |
+| 10.10.200.10     | traefik          | LXC       |
+| 10.10.200.20     | prometheus       | LXC       |
+| 10.10.200.21     | alertmanager     | LXC       |
+| 10.10.200.22     | grafana          | LXC       |
+| 10.10.200.23     | loki             | LXC       |
+| 10.10.200.24     | alloy            | LXC       |
+| 10.10.200.30     | postgresql       | LXC       |
+| 10.10.200.31     | redis            | LXC       |
+| 10.10.200.40     | hashicorp-vault  | LXC       |
+| 10.10.200.41     | vaultwarden      | Docker    |
+| 10.10.200.42     | authentik        | Docker    |
+| 10.10.200.50     | docker-host      | VM        |
+
+---
+
 ## Defining Infrastructure
 
-All VMs and containers are defined as `locals` in `terraform/main.tf`. Terraform iterates over them with `for_each` and passes each entry to the appropriate module.
+All VMs and containers are defined as `locals` in `terraform/main.tf`. Terraform uses `for_each` to iterate over them and pass each entry to the appropriate module.
+
+The **hostname** is always derived from the map key — do not set it explicitly.
 
 ### Adding a VM
 
-VMs are defined under `local.vms`. There are two patterns:
-
-**1. Clone from a defaults group** (e.g. `wp_hosts`):
+Add an entry to `local._vms`. The `hostname` is injected automatically from the key.
 
 ```hcl
-wp_hosts = {
-  wp-host1 = {}        # uses all wp_host_defaults
-  wp-host2 = {
-    memory = 8192      # override a single field
-  }
-}
-```
+_vms = {
+  my-vm = {
+    cores  = 2
+    memory = 4096
+    disk   = { size = 20, datastore = "local-ssd", format = "qcow2" }
 
-`wp_host_defaults` provides: 4 cores, 4096 MB RAM, 20 GB boot disk, two 40 GB extra disks, VLAN 200, DHCP.
+    # Static IP:
+    network = { bridge = "vmbr1", vlan = 200, address = "10.10.200.X/24", gateway = local.gw }
 
-**2. Define a standalone VM** (inline in the `vms` merge block):
+    # DHCP (omit address and gateway):
+    # network = { bridge = "vmbr1", vlan = 200 }
 
-```hcl
-my-vm = {
-  hostname = "my-vm"
-  cores    = 2
-  memory   = 4096
-
-  disk = {
-    size      = 20
-    datastore = "local-ssd"
-    format    = "qcow2"
-  }
-
-  network = {
-    bridge  = "vmbr4"
-    vlan    = 200
-    address = "10.10.200.10/29"  # omit for DHCP
-    gateway = "10.10.200.1"      # omit for DHCP
+    # Optional — extra disks attached as scsi1, scsi2, ...:
+    # additional_disks = [
+    #   { size = 40, datastore = "local-ssd", format = "qcow2" },
+    # ]
   }
 }
 ```
@@ -105,50 +125,35 @@ All VMs are cloned from the template at `clone_vm_id` (default `9000`). The QEMU
 
 ### Adding an LXC Container
 
-Containers are defined under `local.containers`. Same two patterns apply:
-
-**1. Clone from a defaults group** (e.g. `monitoring_hosts`):
+Add an entry to `local._containers`. The **hostname** and **template** (`ubuntu-24.04`) are injected automatically. The **bridge** and **vlan** come from `local.lxc_net` and don't need to be specified.
 
 ```hcl
-monitoring_hosts = {
-  my-exporter = {}          # uses all monitoring_defaults
-  prometheus   = {
-    memory = 2048           # override a single field
+_containers = {
+  my-app = {
+    cores  = 1
+    memory = 512
+    disk   = 8
+
+    # Static IP:
+    network = { address = "10.10.200.X/24", gateway = local.gw }
+
+    # DHCP (omit network entirely, or use network = {}):
   }
 }
 ```
 
-`monitoring_defaults` provides: 1 core, 1024 MB RAM, 8 GB disk, Ubuntu 24.04 template, VLAN 200, DHCP.
-
-**2. Define a standalone container**:
+To override the template or OS type for a specific container:
 
 ```hcl
 my-app = {
-  hostname = "my-app"
-  cores    = 2
-  memory   = 1024
-  disk     = 16
-  template = local.ubuntu_template
-  os_type  = "ubuntu"       # optional, defaults to "ubuntu"
-
-  network = {
-    bridge  = "vmbr4"
-    vlan    = 200
-    address = "10.10.200.20/29"  # omit for DHCP
-    gateway = "10.10.200.1"      # omit for DHCP
-  }
+  cores    = 1
+  memory   = 512
+  disk     = 8
+  template = "local-ssd:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+  os_type  = "debian"
+  network  = { address = "10.10.200.X/24", gateway = local.gw }
 }
 ```
-
-### Shared Template Reference
-
-The Ubuntu template path is defined once as `local.ubuntu_template` and referenced by all containers:
-
-```hcl
-ubuntu_template = "local-ssd:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
-```
-
-To upgrade the template, change it in one place.
 
 ---
 
@@ -164,34 +169,48 @@ Clones a VM from a base template and applies CPU, memory, disk, and network conf
 | `clone_vm_id` | `number` | VM ID to clone from                | `9000`  |
 | `vm`          | `object` | Full VM config (see variables.tf)  | —       |
 
-**Outputs:**
+**`vm` object fields:**
 
-| Output           | Description                      |
-|------------------|----------------------------------|
-| `name`           | VM hostname as registered in PVE |
-| `ipv4_addresses` | All IPv4 addresses from agent    |
+| Field              | Type     | Required | Default  | Description                        |
+|--------------------|----------|----------|----------|------------------------------------|
+| `hostname`         | `string` | yes      | —        | Injected from map key in `main.tf` |
+| `cores`            | `number` | yes      | —        |                                    |
+| `memory`           | `number` | yes      | —        | MB                                 |
+| `disk`             | `object` | yes      | —        | `size`, `datastore`, `format`      |
+| `additional_disks` | `list`   | no       | `[]`     | Attached as `scsi1`, `scsi2`, …    |
+| `network.bridge`   | `string` | yes      | —        |                                    |
+| `network.vlan`     | `number` | no       | —        |                                    |
+| `network.address`  | `string` | no       | `"dhcp"` | CIDR notation e.g. `10.0.0.2/24`  |
+| `network.gateway`  | `string` | no       | —        |                                    |
 
 **Notes:**
 - The `initialization` block is in `ignore_changes` — cloud-init only runs on first creation. IP/hostname changes require destroy + recreate.
-- `additional_disks` is optional and defaults to `[]`. Disks are attached as `scsi1`, `scsi2`, etc.
 
 ### `proxmox_lxc`
 
 Creates an unprivileged LXC container with an injected SSH public key.
 
-| Variable        | Type     | Description                              | Default       |
-|-----------------|----------|------------------------------------------|---------------|
-| `node_name`     | `string` | Target Proxmox node                      | —             |
-| `datastore_id`  | `string` | Datastore for the container disk         | `"local-ssd"` |
-| `ssh_public_key`| `string` | Path to SSH public key file              | —             |
-| `container`     | `object` | Full container config (see variables.tf) | —             |
+| Variable         | Type     | Description                              | Default       |
+|------------------|----------|------------------------------------------|---------------|
+| `node_name`      | `string` | Target Proxmox node                      | —             |
+| `datastore_id`   | `string` | Datastore for the container disk         | `"local-ssd"` |
+| `ssh_public_key` | `string` | Path to SSH public key file              | —             |
+| `container`      | `object` | Full container config (see variables.tf) | —             |
 
-**Outputs:**
+**`container` object fields:**
 
-| Output     | Description                        |
-|------------|------------------------------------|
-| `hostname` | Container hostname                 |
-| `ipv4`     | IPv4 addresses from the container  |
+| Field              | Type     | Required | Default     | Description                          |
+|--------------------|----------|----------|-------------|--------------------------------------|
+| `hostname`         | `string` | yes      | —           | Injected from map key in `main.tf`   |
+| `cores`            | `number` | yes      | —           |                                      |
+| `memory`           | `number` | yes      | —           | MB                                   |
+| `disk`             | `number` | yes      | —           | GB                                   |
+| `template`         | `string` | yes      | —           | Injected from `local.ubuntu_template`|
+| `os_type`          | `string` | no       | `"ubuntu"`  |                                      |
+| `network.bridge`   | `string` | yes      | —           | Injected from `local.lxc_net`        |
+| `network.vlan`     | `number` | no       | —           | Injected from `local.lxc_net`        |
+| `network.address`  | `string` | no       | `"dhcp"`    | CIDR notation e.g. `10.0.0.2/24`    |
+| `network.gateway`  | `string` | no       | —           |                                      |
 
 **Notes:**
 - Containers run unprivileged with `nesting = true` (required for Docker inside LXC).

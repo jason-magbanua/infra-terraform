@@ -21,16 +21,27 @@ locals {
       network = { bridge = "vmbr1", vlan = 200, address = "10.10.200.50/24", gateway = local.gw }
     }
 
-    # wp-host1 = {
-    #   cores  = 4
-    #   memory = 4096
-    #   disk   = { size = 20, datastore = "local-ssd", format = "qcow2" }
-    #   additional_disks = [
-    #     { size = 40, datastore = "local-ssd", format = "qcow2" },
-    #     { size = 40, datastore = "local-ssd", format = "qcow2" },
-    #   ]
-    #   network = { bridge = "vmbr1", vlan = 200, address = "10.10.200.X/24", gateway = local.gw }
-    # }
+    wp-host1 = {
+      cores  = 4
+      memory = 2048
+      disk   = { size = 20, datastore = "local-ssd", format = "qcow2" }
+      additional_disks = [
+        { size = 40, datastore = "local-ssd", format = "qcow2" },
+        { size = 40, datastore = "local-ssd", format = "qcow2" },
+      ]
+      network = { bridge = "vmbr1", vlan = 200, address = "10.10.200.80/24", gateway = local.gw }
+    }
+
+     wp-host2-dhcp = {
+      cores  = 4
+      memory = 2048
+      disk   = { size = 20, datastore = "local-ssd", format = "qcow2" }
+      additional_disks = [
+        { size = 40, datastore = "local-ssd", format = "qcow2" },
+        { size = 40, datastore = "local-ssd", format = "qcow2" },
+      ]
+      network = { bridge = "vmbr1", vlan = 200}
+    }
 
   }
 
@@ -64,6 +75,9 @@ locals {
 
     # --- Security & Identity -------------------------------------------
     hashicorp-vault = { cores = 1, memory = 512, disk = 4, network = { address = "10.10.200.40/24", gateway = local.gw } }
+
+    # --- Random Containers ---------------------------------------------
+    random-lxc = { cores = 1, memory = 512, disk = 4, network ={} }
 
   }
 

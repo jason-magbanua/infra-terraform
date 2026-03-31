@@ -73,14 +73,12 @@ proxmox_node      = "pve1"
 | IP               | Host             | Type      |
 |------------------|------------------|-----------|
 | 10.10.200.1      | gateway (VyOS)   | —         |
+| 10.10.200.2      | infra-server     | VM       |
 | 10.10.200.3      | jump-host        | LXC       |
 | 10.10.200.4      | apt-cacher-ng    | LXC       |
 | 10.10.200.10     | traefik          | LXC       |
 | 10.10.200.20     | prometheus       | LXC       |
-| 10.10.200.21     | alertmanager     | LXC       |
-| 10.10.200.22     | grafana          | LXC       |
-| 10.10.200.23     | loki             | LXC       |
-| 10.10.200.24     | alloy            | LXC       |
+| 10.10.200.21     | grafana          | LXC       |
 | 10.10.200.41     | vaultwarden      | Docker    |
 | 10.10.200.43     | wiki.js          | Docker    |
 | 10.10.200.50     | docker-host      | VM        |

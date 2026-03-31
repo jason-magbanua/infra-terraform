@@ -65,10 +65,7 @@ locals {
 
     # --- Observability -------------------------------------------------
     prometheus    = { cores = 1, memory = 1024, disk = 8,  network = { address = "10.10.200.20/24", gateway = local.gw } }
-    alertmanager  = { cores = 1, memory = 512,  disk = 4,  network = { address = "10.10.200.21/24", gateway = local.gw } }
-    grafana       = { cores = 1, memory = 1024, disk = 8,  network = { address = "10.10.200.22/24", gateway = local.gw } }
-    loki          = { cores = 1, memory = 1024, disk = 8,  network = { address = "10.10.200.23/24", gateway = local.gw } }
-    alloy         = { cores = 1, memory = 512,  disk = 4,  network = { address = "10.10.200.24/24", gateway = local.gw } }
+    grafana       = { cores = 1, memory = 1024, disk = 8,  network = { address = "10.10.200.21/24", gateway = local.gw } }
 
   }
 

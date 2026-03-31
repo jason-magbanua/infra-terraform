@@ -57,8 +57,8 @@ locals {
   _containers = {
 
     # --- Infrastructure Core -------------------------------------------
-    jump-host     = { cores = 1, memory = 512,  disk = 4,  network = { address = "10.10.200.3/24",  gateway = local.gw } }
-    apt-cacher-ng = { cores = 1, memory = 512,  disk = 20, network = { address = "10.10.200.4/24",  gateway = local.gw } }
+    # jump-host     = { cores = 1, memory = 512,  disk = 4,  network = { address = "10.10.200.3/24",  gateway = local.gw } }
+    # apt-cacher-ng = { cores = 1, memory = 512,  disk = 20, network = { address = "10.10.200.4/24",  gateway = local.gw } }
 
     # --- Networking & Proxy --------------------------------------------
     traefik       = { cores = 1, memory = 512,  disk = 4,  network = { address = "10.10.200.10/24", gateway = local.gw } }

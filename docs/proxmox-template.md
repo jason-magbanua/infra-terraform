@@ -81,11 +81,7 @@ proxmox_node      = "pve1"
 | 10.10.200.22     | grafana          | LXC       |
 | 10.10.200.23     | loki             | LXC       |
 | 10.10.200.24     | alloy            | LXC       |
-| 10.10.200.30     | postgresql       | LXC       |
-| 10.10.200.31     | redis            | LXC       |
-| 10.10.200.40     | hashicorp-vault  | LXC       |
 | 10.10.200.41     | vaultwarden      | Docker    |
-| 10.10.200.42     | authentik        | Docker    |
 | 10.10.200.43     | wiki.js          | Docker    |
 | 10.10.200.50     | docker-host      | VM        |
 

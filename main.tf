@@ -70,10 +70,6 @@ locals {
     loki          = { cores = 1, memory = 1024, disk = 8,  network = { address = "10.10.200.23/24", gateway = local.gw } }
     alloy         = { cores = 1, memory = 512,  disk = 4,  network = { address = "10.10.200.24/24", gateway = local.gw } }
 
-    # --- Data ----------------------------------------------------------
-    postgresql    = { cores = 2, memory = 2048, disk = 20, network = { address = "10.10.200.30/24", gateway = local.gw } }
-    redis         = { cores = 1, memory = 512,  disk = 4,  network = { address = "10.10.200.31/24", gateway = local.gw } }
-
   }
 
   containers = {

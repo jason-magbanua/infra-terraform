@@ -50,6 +50,15 @@ locals {
       network         = { bridge = "vmbr1", vlan = 200, address = "10.10.200.62/24", gateway = local.gw }
     }
 
+    k3s-worker3 = {
+      cores           = 2
+      memory          = 4096
+      memory_floating = 3072
+      on_boot         = false
+      disk            = { size = 20, datastore = "local-ssd", format = "qcow2" }
+      network         = { bridge = "vmbr1", vlan = 200, address = "10.10.200.63/24", gateway = local.gw }
+    }
+
     # Commenting this for example
     # wp-host1 = {
     #   cores  = 4

@@ -72,16 +72,16 @@ proxmox_node      = "pve1"
 
 | IP               | Host             | Type      |
 |------------------|------------------|-----------|
-| 10.10.200.1      | gateway (VyOS)   | —         |
-| 10.10.200.2      | infra-server     | VM       |
-| 10.10.200.3      | jump-host        | LXC       |
-| 10.10.200.4      | apt-cacher-ng    | LXC       |
+| 10.10.200.1      | gateway (VyOS)   | VM        |
+| 10.10.200.2      | infra-server     | VM        |
 | 10.10.200.10     | traefik          | LXC       |
 | 10.10.200.20     | prometheus       | LXC       |
 | 10.10.200.21     | grafana          | LXC       |
 | 10.10.200.41     | vaultwarden      | Docker    |
 | 10.10.200.43     | wiki.js          | Docker    |
 | 10.10.200.50     | docker-host      | VM        |
+| 10.10.200.60     | k3s-control      | VM        |
+| 10.10.200.61     | k3s-worker1      | VM        |
 
 ---
 
@@ -98,9 +98,11 @@ Add an entry to `local._vms`. The `hostname` is injected automatically from the 
 ```hcl
 _vms = {
   my-vm = {
-    cores  = 2
-    memory = 4096
-    disk   = { size = 20, datastore = "local-ssd", format = "qcow2" }
+    cores           = 2
+    memory          = 4096
+    # memory_floating = 3072  # balloon minimum (75% of memory); omit to disable ballooning
+    # on_boot         = false  # default true
+    disk            = { size = 20, datastore = "local-ssd", format = "qcow2" }
 
     # Static IP:
     network = { bridge = "vmbr1", vlan = 200, address = "10.10.200.X/24", gateway = local.gw }
@@ -166,20 +168,23 @@ Clones a VM from a base template and applies CPU, memory, disk, and network conf
 
 **`vm` object fields:**
 
-| Field              | Type     | Required | Default  | Description                        |
-|--------------------|----------|----------|----------|------------------------------------|
-| `hostname`         | `string` | yes      | —        | Injected from map key in `main.tf` |
-| `cores`            | `number` | yes      | —        |                                    |
-| `memory`           | `number` | yes      | —        | MB                                 |
-| `disk`             | `object` | yes      | —        | `size`, `datastore`, `format`      |
-| `additional_disks` | `list`   | no       | `[]`     | Attached as `scsi1`, `scsi2`, …    |
-| `network.bridge`   | `string` | yes      | —        |                                    |
-| `network.vlan`     | `number` | no       | —        |                                    |
-| `network.address`  | `string` | no       | `"dhcp"` | CIDR notation e.g. `10.0.0.2/24`  |
-| `network.gateway`  | `string` | no       | —        |                                    |
+| Field              | Type     | Required | Default  | Description                                        |
+|--------------------|----------|----------|----------|----------------------------------------------------|
+| `hostname`         | `string` | yes      | —        | Injected from map key in `main.tf`                 |
+| `cores`            | `number` | yes      | —        |                                                    |
+| `memory`           | `number` | yes      | —        | MB — maximum (dedicated) memory                    |
+| `memory_floating`  | `number` | no       | —        | MB — balloon minimum; enables ballooning when set  |
+| `on_boot`          | `bool`   | no       | `true`   | Start VM automatically when Proxmox node boots     |
+| `disk`             | `object` | yes      | —        | `size`, `datastore`, `format`                      |
+| `additional_disks` | `list`   | no       | `[]`     | Attached as `scsi1`, `scsi2`, …                    |
+| `network.bridge`   | `string` | yes      | —        |                                                    |
+| `network.vlan`     | `number` | no       | —        |                                                    |
+| `network.address`  | `string` | no       | `"dhcp"` | CIDR notation e.g. `10.0.0.2/24`                  |
+| `network.gateway`  | `string` | no       | —        |                                                    |
 
 **Notes:**
 - The `initialization` block is in `ignore_changes` — cloud-init only runs on first creation. IP/hostname changes require destroy + recreate.
+- `started` is in `ignore_changes` — Terraform starts the VM on creation but will never force-start or stop it on subsequent applies. Safe to stop VMs manually.
 
 ### `proxmox_lxc`
 
@@ -202,6 +207,7 @@ Creates an unprivileged LXC container with an injected SSH public key.
 | `disk`             | `number` | yes      | —           | GB                                   |
 | `template`         | `string` | yes      | —           | Injected from `local.ubuntu_template`|
 | `os_type`          | `string` | no       | `"ubuntu"`  |                                      |
+| `on_boot`          | `bool`   | no       | `true`      | Start container automatically when Proxmox node boots |
 | `network.bridge`   | `string` | yes      | —           | Injected from `local.lxc_net`        |
 | `network.vlan`     | `number` | no       | —           | Injected from `local.lxc_net`        |
 | `network.address`  | `string` | no       | `"dhcp"`    | CIDR notation e.g. `10.0.0.2/24`    |
@@ -211,6 +217,7 @@ Creates an unprivileged LXC container with an injected SSH public key.
 - Containers run unprivileged with `nesting = true` (required for Docker inside LXC).
 - `swap = 0` — swap is disabled on all containers.
 - The `initialization` block is in `ignore_changes` for the same reason as VMs.
+- `started` is in `ignore_changes` — same behaviour as VMs; stopping a container manually won't be overridden by `terraform apply`.
 - `ssh_public_key` supports `~` expansion via `pathexpand()`.
 
 ---

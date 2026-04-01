@@ -10,7 +10,7 @@ resource "proxmox_virtual_environment_container" "container" {
 
   node_name     = var.node_name
   unprivileged  = true
-  start_on_boot = true
+  start_on_boot = var.container.on_boot
 
   operating_system {
     template_file_id = var.container.template
@@ -60,7 +60,8 @@ resource "proxmox_virtual_environment_container" "container" {
 
   lifecycle {
     ignore_changes = [
-      initialization
+      initialization,
+      started,
     ]
   }
 }

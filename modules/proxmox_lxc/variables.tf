@@ -29,5 +29,6 @@ variable "container" {
       address = optional(string, "dhcp")
       gateway = optional(string)
     })
+    on_boot = optional(bool, true)
   })
 }

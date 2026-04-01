@@ -19,8 +19,11 @@ resource "proxmox_virtual_environment_vm" "vm" {
     cores = var.vm.cores
   }
 
+  on_boot = var.vm.on_boot
+
   memory {
     dedicated = var.vm.memory
+    floating  = var.vm.memory_floating
   }
 
   disk {
@@ -64,7 +67,8 @@ resource "proxmox_virtual_environment_vm" "vm" {
 
   lifecycle {
     ignore_changes = [
-      initialization
+      initialization,
+      started,
     ]
   }
 }

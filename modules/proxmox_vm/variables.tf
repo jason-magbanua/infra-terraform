@@ -31,5 +31,7 @@ variable "vm" {
       address = optional(string, "dhcp")
       gateway = optional(string)
     })
+    memory_floating = optional(number)
+    on_boot         = optional(bool, true)
 })
 }

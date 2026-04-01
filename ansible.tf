@@ -21,13 +21,17 @@ pve1 ansible_host=${local.proxmox_host_ip} ansible_user=root ansible_ssh_private
 
 [proxmox_vms]
 %{ for vm in module.vms ~}
+%{ if try([for ip in flatten(vm.ipv4_addresses) : ip if ip != "127.0.0.1"][0], "") != "" ~}
 ${vm.name} ansible_host=${try([for ip in flatten(vm.ipv4_addresses) : ip if ip != "127.0.0.1"][0], "")}
-%{ endfor }
+%{ endif ~}
+%{ endfor ~}
 
 [proxmox_containers]
 %{ for ct in module.containers ~}
+%{ if try([for ip in ct.ipv4 : ip if ip != "127.0.0.1"][0], "") != "" ~}
 ${ct.hostname} ansible_host=${try([for ip in ct.ipv4 : ip if ip != "127.0.0.1"][0], "")}
-%{ endfor }
+%{ endif ~}
+%{ endfor ~}
 
 [proxmox_containers:vars]
 ansible_user=root

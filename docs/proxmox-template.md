@@ -10,18 +10,20 @@ Terraform provisions Proxmox VMs and LXC containers via the [`bpg/proxmox`](http
 terraform/
 ├── main.tf               # All VM and container definitions
 ├── providers.tf          # Provider config and version pins
-├── variables.tf          # Root input variables (endpoint, token, node)
+├── variables.tf          # Root input variables
 ├── outputs.tf            # infra_summary output (name → IP map)
 ├── ansible.tf            # Ansible inventory generated from provisioned IPs
 └── modules/
     ├── proxmox_vm/       # Reusable module for Proxmox VMs
     │   ├── main.tf
     │   ├── variables.tf
-    │   └── outputs.tf
+    │   ├── outputs.tf
+    │   └── versions.tf
     └── proxmox_lxc/      # Reusable module for LXC containers
         ├── main.tf
         ├── variables.tf
-        └── outputs.tf
+        ├── outputs.tf
+        └── versions.tf
 ```
 
 ---
@@ -40,11 +42,17 @@ terraform/
 
 ### Variables
 
-| Variable             | Description                              | Default |
-|----------------------|------------------------------------------|---------|
-| `proxmox_endpoint`   | URL of the Proxmox API endpoint          | —       |
-| `proxmox_api_token`  | Proxmox API token (sensitive)            | —       |
-| `proxmox_node`       | Node name where resources are created    | `pve1`  |
+| Variable                  | Description                                             | Default                                    |
+|---------------------------|---------------------------------------------------------|--------------------------------------------|
+| `proxmox_endpoint`        | URL of the Proxmox API endpoint                         | —                                          |
+| `proxmox_api_token`       | Proxmox API token (sensitive)                           | —                                          |
+| `proxmox_node`            | Node name where resources are created                   | `pve1`                                     |
+| `proxmox_host_ip`         | IP address of the Proxmox host (Ansible inventory)      | —                                          |
+| `ansible_user`            | SSH user for Ansible managed hosts                      | `infra`                                    |
+| `ansible_ssh_key`         | Path to SSH private key for Ansible                     | `~/.ssh/id_rsa_ansible`                    |
+| `ansible_ssh_public_key`  | Path to SSH public key to inject into containers        | `~/.ssh/id_rsa_ansible.pub`                |
+| `proxmox_root_ssh_key`    | Path to SSH private key for Proxmox root access         | `~/.ssh/root-sshkey.rsa`                   |
+| `ansible_inventory_path`  | File path where the Ansible inventory will be written   | `/opt/infra/ansible/inventory/lab/hosts`   |
 
 Set these via a `terraform.tfvars` file or environment variables (`TF_VAR_*`).
 
@@ -53,6 +61,7 @@ Example `terraform.tfvars`:
 proxmox_endpoint  = "https://172.16.1.8:8006"
 proxmox_api_token = "root@pam!terraform=<token>"
 proxmox_node      = "pve1"
+proxmox_host_ip   = "172.16.1.8"
 ```
 
 ---
@@ -160,11 +169,10 @@ my-app = {
 
 Clones a VM from a base template and applies CPU, memory, disk, and network configuration via cloud-init.
 
-| Variable      | Type     | Description                        | Default |
-|---------------|----------|------------------------------------|---------|
-| `node_name`   | `string` | Target Proxmox node                | —       |
-| `clone_vm_id` | `number` | VM ID to clone from                | `9000`  |
-| `vm`          | `object` | Full VM config (see variables.tf)  | —       |
+| Variable    | Type     | Description                       | Default |
+|-------------|----------|-----------------------------------|---------|
+| `node_name` | `string` | Target Proxmox node               | —       |
+| `vm`        | `object` | Full VM config (see variables.tf) | —       |
 
 **`vm` object fields:**
 
@@ -173,6 +181,7 @@ Clones a VM from a base template and applies CPU, memory, disk, and network conf
 | `hostname`         | `string` | yes      | —        | Injected from map key in `main.tf`                 |
 | `cores`            | `number` | yes      | —        |                                                    |
 | `memory`           | `number` | yes      | —        | MB — maximum (dedicated) memory                    |
+| `clone_vm_id`      | `number` | no       | `9000`   | VM ID to clone from                                |
 | `memory_floating`  | `number` | no       | —        | MB — balloon minimum; enables ballooning when set  |
 | `on_boot`          | `bool`   | no       | `true`   | Start VM automatically when Proxmox node boots     |
 | `disk`             | `object` | yes      | —        | `size`, `datastore`, `format`                      |
@@ -226,15 +235,15 @@ Creates an unprivileged LXC container with an injected SSH public key.
 
 After `terraform apply`, an Ansible inventory is written to `/opt/infra/ansible/inventory/lab/hosts`. It is generated automatically from the provisioned IPs using the `local_file` resource in `ansible.tf`.
 
-To change Ansible connection defaults (user, key path, Proxmox host IP), edit the locals at the top of `ansible.tf`:
+To change Ansible connection defaults (user, key path, Proxmox host IP), set them in your `terraform.tfvars` or as `TF_VAR_*` environment variables:
 
 ```hcl
-locals {
-  ansible_user         = "infra"
-  ansible_ssh_key      = "~/.ssh/id_rsa_ansible"
-  proxmox_host_ip      = "172.16.1.8"
-  proxmox_root_ssh_key = "~/.ssh/root-sshkey.rsa"
-}
+ansible_user           = "infra"
+ansible_ssh_key        = "~/.ssh/id_rsa_ansible"
+ansible_ssh_public_key = "~/.ssh/id_rsa_ansible.pub"
+proxmox_host_ip        = "172.16.1.8"
+proxmox_root_ssh_key   = "~/.ssh/root-sshkey.rsa"
+ansible_inventory_path = "/opt/infra/ansible/inventory/lab/hosts"
 ```
 
 ---

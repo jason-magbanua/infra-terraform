@@ -1,22 +1,14 @@
-locals {
-  ansible_user          = "infra"
-  ansible_ssh_key       = "~/.ssh/id_rsa_ansible"
-  proxmox_host_ip       = "172.16.1.8"
-  proxmox_root_ssh_key  = "~/.ssh/root-sshkey.rsa"
-  ansible_inventory_path = "/opt/infra/ansible/inventory/lab/hosts"
-}
-
 resource "local_file" "ansible_inventory" {
-  filename = local.ansible_inventory_path
+  filename = var.ansible_inventory_path
 
   content = <<EOT
 [all:vars]
-ansible_user=${local.ansible_user}
-ansible_ssh_private_key_file=${local.ansible_ssh_key}
+ansible_user=${var.ansible_user}
+ansible_ssh_private_key_file=${var.ansible_ssh_key}
 ansible_python_interpreter=/usr/bin/python3
 
 [proxmox]
-pve1 ansible_host=${local.proxmox_host_ip} ansible_user=root ansible_ssh_private_key_file=${local.proxmox_root_ssh_key}
+pve1 ansible_host=${var.proxmox_host_ip} ansible_user=root ansible_ssh_private_key_file=${var.proxmox_root_ssh_key}
 
 
 [proxmox_vms]

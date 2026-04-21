@@ -3,18 +3,13 @@ variable "node_name" {
   type        = string
 }
 
-variable "clone_vm_id" {
-  description = "Proxmox VM ID to clone as the base image"
-  type        = number
-  default     = 9000
-}
-
 variable "vm" {
   description = "VM configuration"
   type = object({
-    hostname = string
-    cores    = number
-    memory   = number
+    hostname    = string
+    cores       = number
+    memory      = number
+    clone_vm_id = optional(number, 9000)
     disk = object({
       size      = number
       datastore = string

@@ -1,18 +1,10 @@
-terraform {
-  required_providers {
-    proxmox = {
-      source = "bpg/proxmox"
-    }
-  }
-}
-
 resource "proxmox_virtual_environment_vm" "vm" {
 
   name      = var.vm.hostname
   node_name = var.node_name
 
   clone {
-    vm_id = var.clone_vm_id
+    vm_id = var.vm.clone_vm_id
   }
 
   cpu {

@@ -68,29 +68,6 @@ locals {
       network         = { bridge = "vmbr1", vlan = 200, address = "10.10.200.64/24", gateway = local.gw }
     }
 
-    # Commenting this for example
-    # wp-host1 = {
-    #   cores  = 4
-    #   memory = 2048
-    #   disk   = { size = 20, datastore = "local-ssd", format = "qcow2" }
-    #   additional_disks = [
-    #     { size = 40, datastore = "local-ssd", format = "qcow2" },
-    #     { size = 40, datastore = "local-ssd", format = "qcow2" },
-    #   ]
-    #   network = { bridge = "vmbr1", vlan = 200, address = "10.10.200.80/24", gateway = local.gw }
-    # }
-
-    #  wp-host2-dhcp = {
-    #   cores  = 4
-    #   memory = 2048
-    #   disk   = { size = 20, datastore = "local-ssd", format = "qcow2" }
-    #   additional_disks = [
-    #     { size = 40, datastore = "local-ssd", format = "qcow2" },
-    #     { size = 40, datastore = "local-ssd", format = "qcow2" },
-    #   ]
-    #   network = { bridge = "vmbr1", vlan = 200}
-    # }
-
   }
 
   vms = { for k, v in local._vms : k => merge(v, { hostname = k }) }
@@ -103,12 +80,8 @@ locals {
 
   _containers = {
 
-    # --- Infrastructure Core -------------------------------------------
-    # jump-host     = { cores = 1, memory = 512,  disk = 4,  network = { address = "10.10.200.3/24",  gateway = local.gw } }
-    # apt-cacher-ng = { cores = 1, memory = 512,  disk = 20, network = { address = "10.10.200.4/24",  gateway = local.gw } }
-
     # --- Networking & Proxy --------------------------------------------
-    traefik       = { cores = 1, memory = 512,  disk = 4,  network = { address = "10.10.200.10/24", gateway = local.gw } }
+    traefik       = { cores = 1, memory = 512,  disk = 4,  network = { address = "10.10.200.10/24", gateway = local.gw }, on_boot = true }
 
     # --- Observability -------------------------------------------------
     prometheus    = { cores = 1, memory = 1024, disk = 8,  network = { address = "10.10.200.20/24", gateway = local.gw }, on_boot = false }
@@ -148,8 +121,7 @@ module "containers" {
   for_each = local.containers
 
   node_name      = var.proxmox_node
-  datastore_id   = "local-ssd"
-  ssh_public_key = "~/.ssh/id_rsa_ansible.pub"
+  ssh_public_key = var.ansible_ssh_public_key
 
   container = each.value
 }

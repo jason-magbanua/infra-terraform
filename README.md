@@ -38,6 +38,7 @@ Create a `terraform.tfvars`:
 proxmox_endpoint  = "https://<proxmox-ip>:8006"
 proxmox_api_token = "root@pam!terraform=<token>"
 proxmox_node      = "pve1"
+proxmox_host_ip   = "172.16.1.8"
 ```
 
 Then:
@@ -84,3 +85,5 @@ k3s-control:/home/infra/manifests  /opt/infra/k3s-control/manifests  fuse.sshfs 
 ## Security
 
 `*.tfvars` and `*.tfstate` are excluded by `.gitignore`. Never commit API tokens or state files.
+
+State is stored **locally** — back up `terraform.tfstate` before major changes. Losing the state file means manually running `terraform import` for every resource.

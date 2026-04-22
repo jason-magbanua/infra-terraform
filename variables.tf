@@ -18,6 +18,7 @@ variable "proxmox_node" {
 variable "proxmox_host_ip" {
   description = "IP address of the Proxmox host (used in Ansible inventory)"
   type        = string
+  default     = "172.16.1.8"
 }
 
 variable "ansible_user" {

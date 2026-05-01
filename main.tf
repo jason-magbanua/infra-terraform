@@ -87,8 +87,11 @@ locals {
     prometheus    = { cores = 1, memory = 1024, disk = 8,  network = { address = "10.10.200.20/24", gateway = local.gw }, on_boot = false }
     grafana       = { cores = 1, memory = 1024, disk = 8,  network = { address = "10.10.200.21/24", gateway = local.gw }, on_boot = false }
 
+    # --- Servers -------------------------------------------------------
+    lotto-geneator = { cores = 1, memory = 2048, disk = 10,  network = { address = "10.10.200.80/24", gateway = local.gw }, on_boot = false }
+ 
   }
-
+  
   containers = {
     for k, v in local._containers : k => merge(
       { hostname = k, template = local.ubuntu_template },
